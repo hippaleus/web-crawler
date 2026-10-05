@@ -41,9 +41,10 @@ def get_urls_from_html(html: str, base_url: str) -> list[str]| None:
     for i in a:
         if isinstance(i, Tag):
             print(i.get("href"))
-            # urls = i.get("href")
-            urls.append(i.get("href"))
-            return urls
+            href = i.get("href")
+            if href is not None:
+                urls.append(i.get("href"))
+    return urls
 
 def get_images_from_html(html:str):
     pass
