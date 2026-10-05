@@ -33,8 +33,17 @@ def get_first_paragraph_from_html(html: str) -> str | None:
         print(f'The following paragraph was not found outside of main:\n"{paragraph.get_text(strip=True)}"')
         return paragraph.get_text(strip=True)
 
-def get_urls_from_html(html: str, base_url: str) -> str | None:
-    pass
+def get_urls_from_html(html: str, base_url: str) -> list[str]| None:
+    urls: list = []
+    soup = BeautifulSoup(html, 'html.parser')
+    a = soup.find_all("a")
+    print(a)
+    for i in a:
+        if isinstance(i, Tag):
+            print(i.get("href"))
+            # urls = i.get("href")
+            urls.append(i.get("href"))
+            return urls
 
 def get_images_from_html(html:str):
     pass
