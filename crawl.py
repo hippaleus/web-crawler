@@ -16,7 +16,6 @@ def get_heading_from_html(html: str) -> str | None:
     soup = BeautifulSoup(html, 'html.parser')
     header = soup.find("h1")
     if isinstance(header, Tag):
-        print(f'The header found contains: "{header.get_text(strip=True)}" in unicode string.')
         return header.get_text(strip=True)
 
 def get_first_paragraph_from_html(html: str) -> str | None:
@@ -24,26 +23,22 @@ def get_first_paragraph_from_html(html: str) -> str | None:
     main = soup.find("main")
     if isinstance(main, Tag):
         paragraph = main.find("p")
-        print("main tag is found.")
         if isinstance(paragraph, Tag):
-            print(f'The paragraph found inside of main contains the following:\n"{paragraph.get_text(strip=True)}"')
             return paragraph.get_text(strip= True)
     paragraph = soup.find("p")
     if isinstance(paragraph, Tag):
-        print(f'The following paragraph was not found outside of main:\n"{paragraph.get_text(strip=True)}"')
         return paragraph.get_text(strip=True)
 
 def get_urls_from_html(html: str, base_url: str) -> list[str]| None:
     urls: list = []
     soup = BeautifulSoup(html, 'html.parser')
     a = soup.find_all("a")
-    print(a)
     for i in a:
         if isinstance(i, Tag):
-            print(i.get("href"))
             href = i.get("href")
             if href is not None:
-                urls.append(href)
+                abs_url = urljoin(base_url, href)
+                urls.append(abs_url)
     return urls
 
 def get_images_from_html(html:str, base_url:str) -> list | None:
@@ -56,5 +51,4 @@ def get_images_from_html(html:str, base_url:str) -> list | None:
             if src is not None:
                 abs_path = urljoin(base_url, src)
                 images.append(abs_path)
-                print(images)
     return images
