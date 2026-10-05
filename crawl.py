@@ -1,5 +1,7 @@
 from urllib.parse import urlsplit
 
+from bs4 import BeautifulSoup, Tag
+
 
 def normalize_url(url:str) -> str | None:
     split = urlsplit(url)
@@ -9,3 +11,30 @@ def normalize_url(url:str) -> str | None:
     # fourth: str = split._replace(path="pricing").geturl()
     # fifth: str = split._replace(scheme="").geturl()
     return f"{split.netloc}{split.path}"
+
+def get_heading_from_html(html: str) -> str | None:
+    soup = BeautifulSoup(html, 'html.parser')
+    header = soup.find("h1")
+    if isinstance(header, Tag):
+        print(f'The header found contains: "{header.get_text(strip=True)}" in unicode string.')
+        return header.get_text(strip=True)
+
+def get_first_paragraph_from_html(html: str) -> str | None:
+    soup = BeautifulSoup(html, 'html.parser')
+    main = soup.find("main")
+    if isinstance(main, Tag):
+        paragraph = main.find("p")
+        print(f"main tag is found.")
+        if isinstance(paragraph, Tag):
+            print(f'The paragraph found inside of main contains the following:\n"{paragraph.get_text(strip=True)}"')
+            return paragraph.get_text(strip= True)
+    paragraph = soup.find("p")
+    if isinstance(paragraph, Tag):
+        print(f'The following paragraph was not found outside of main:\n"{paragraph.get_text(strip=True)}"')
+        return paragraph.get_text(strip=True)
+
+def get_urls_from_html(html: str, base_url: str) -> str | None:
+    pass
+
+def get_images_from_html(html:str):
+    pass
