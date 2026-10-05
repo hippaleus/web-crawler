@@ -1,4 +1,4 @@
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
@@ -24,7 +24,7 @@ def get_first_paragraph_from_html(html: str) -> str | None:
     main = soup.find("main")
     if isinstance(main, Tag):
         paragraph = main.find("p")
-        print(f"main tag is found.")
+        print("main tag is found.")
         if isinstance(paragraph, Tag):
             print(f'The paragraph found inside of main contains the following:\n"{paragraph.get_text(strip=True)}"')
             return paragraph.get_text(strip= True)
@@ -43,8 +43,18 @@ def get_urls_from_html(html: str, base_url: str) -> list[str]| None:
             print(i.get("href"))
             href = i.get("href")
             if href is not None:
-                urls.append(i.get("href"))
+                urls.append(href)
     return urls
 
-def get_images_from_html(html:str):
-    pass
+def get_images_from_html(html:str, base_url:str) -> list | None:
+    images: list = []
+    soup = BeautifulSoup(html, 'html.parser')
+    img = soup.find_all("img")
+    for i in img:
+        if isinstance(i, Tag):
+            src = i.get("src")
+            if src is not None:
+                abs_path = urljoin(base_url, src)
+                images.append(abs_path)
+                print(images)
+    return images
