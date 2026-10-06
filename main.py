@@ -1,10 +1,10 @@
 import asyncio
 import sys
+from asyncio.tasks import create_task
 from multiprocessing import Semaphore
 from urllib.parse import urlsplit
 
 import aiohttp
-import requests
 from requests.compat import urljoin
 
 import crawl
@@ -42,7 +42,49 @@ class AsyncCrawler:
             # print(r.headers['content-type'])
             if "text/html" not in response.headers['content-type']:
                 raise Exception(f"{url} does not contain an html file")
-            return response.text
+            return await response.text()
+
+    async def page_crawl(self, base_url:str, current_url=None, page_data=None):
+        # if self.page_data is None:
+        #     page_data = {}
+        if current_url is None:
+            current_url = base_url
+        if urlsplit(current_url).netloc != urlsplit(base_url).netloc:
+            return
+
+        normalized = crawl.normalize_url(current_url)
+        if normalized in self.page_data:
+            return self.page_data
+
+        visit = self.add_page_visit(normalized)
+        visited = await visit
+        if visited is False:
+            return
+        async with self.semaphore:
+            getting = self.get_html(current_url)
+            html = await getting
+
+            print(f"crawling: {current_url}")
+
+            data = crawl.extract_page_data(html, current_url)
+            self.page_data[normalized] = data
+
+        tasks = []
+        for link in data["outgoing_links"]:
+            full_url = urljoin(base_url, link)
+            task = asyncio.create_task(self.page_crawl(base_url, full_url, self.page_data))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
+    async def crawl(self):
+        await self.page_crawl(self.base_url)
+        return self.page_data
+
+
+async def crawl_site_async(base_url):
+    async with AsyncCrawler(base_url) as c:
+        return await c.crawl()
+
 
 def argumentation(BASE_URL):
     args = BASE_URL
@@ -54,46 +96,14 @@ def argumentation(BASE_URL):
         sys.exit(1)
     return sys.argv[1]
 
-# def get_html(url: str):
-#     headers= {"User-Agent": "BootCrawler/1.0"}
-#     r = requests.get(url, headers=headers)
-#
-#     if r.status_code >=400 and r.status_code < 500:
-#         raise Exception(f"status code: {r.status_code}")
-#     # print(r.headers['content-type'])
-#     if "text/html" not in r.headers['content-type']:
-#         raise Exception(f"{url} does not contain an html file")
-#     return r.text
-#
 
-def page_crawl(base_url:str, current_url=None, page_data=None):
-    if page_data is None:
-        page_data = {}
-    if urlsplit(current_url).netloc != urlsplit(base_url).netloc:
-       return
-    normalized = crawl.normalize_url(current_url)
-    if normalized in page_data:
-        return page_data
-    html = get_html(current_url)
-    print(f"crawling: {current_url}")
-    data = crawl.extract_page_data(html, base_url)
-    page_data[normalized] = data
-
-    for link in data["outgoing_links"]:
-        full_url = urljoin(base_url, link)
-        page_crawl(base_url, full_url, page_data)
-
-    return page_data
-
-def main():
-    url = argumentation(sys.argv)
-    print(f"starting crawl of: {url}")
-    try:
-        (get_html(url))
-    except Exception as e:
-        print(f"Error: {e}")
-
-    page_crawl(url, url)
+async def main():
+    base_url = argumentation(sys.argv)
+    print(f"starting crawl of: {base_url}")
+    page_data = await crawl_site_async(base_url)
+    for page in page_data.values():
+        print(page["url"])
+        print(page["heading"])
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
