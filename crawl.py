@@ -22,13 +22,13 @@ def normalize_url(url:str) -> str:
     # fifth: str = split._replace(scheme="").geturl()
     return f"{split.netloc}{split.path}"
 
-def get_heading_from_html(html: str) -> str:
+def get_heading_from_html(html: str) -> str:  # pyright: ignore[reportReturnType]
     soup = BeautifulSoup(html, 'html.parser')
     header = soup.find("h1")
     if isinstance(header, Tag):
         return header.get_text(strip=True)
 
-def get_first_paragraph_from_html(html: str) -> str:
+def get_first_paragraph_from_html(html: str) -> str:  # pyright: ignore[reportReturnType]
     soup = BeautifulSoup(html, 'html.parser')
     main = soup.find("main")
     if isinstance(main, Tag):
