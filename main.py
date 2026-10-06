@@ -4,6 +4,7 @@ from multiprocessing import Semaphore
 from urllib.parse import urlsplit
 
 import aiohttp
+import requests
 from requests.compat import urljoin
 
 import crawl
