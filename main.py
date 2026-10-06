@@ -1,11 +1,47 @@
+import asyncio
 import sys
+from multiprocessing import Semaphore
 from urllib.parse import urlsplit
 
-import requests
+import aiohttp
 from requests.compat import urljoin
 
 import crawl
 
+
+class AsyncCrawler:
+    def __init__(self, base_url) -> None:
+        self.base_url = base_url
+        self.base_domain = urlsplit(base_url).netloc
+        self.page_data = {}
+        self.visited =  set()
+        self.lock = asyncio.Lock()
+        self.max_concurrency = 2
+        self.semaphore = asyncio.Semaphore(self.max_concurrency)
+        self.session = None
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+    async def __aexit__(self, exc_type, exc_val, exc_tp):
+        await self.session.close()
+
+    async def add_page_visit(self, normalized_url):
+        async with self.lock:
+            if normalized_url in self.visited:
+                return False
+            else:
+                self.visited.add(normalized_url)
+                return True
+    async def get_html(self, url: str):
+        headers= {"User-Agent": "BootCrawler/1.0"}
+        async with self.session.get(url, headers=headers) as response:
+
+            if response.status >=400 and response.status < 500:
+                raise Exception(f"status code: {response.status}")
+            # print(r.headers['content-type'])
+            if "text/html" not in response.headers['content-type']:
+                raise Exception(f"{url} does not contain an html file")
+            return response.text
 
 def argumentation(BASE_URL):
     args = BASE_URL
@@ -17,17 +53,17 @@ def argumentation(BASE_URL):
         sys.exit(1)
     return sys.argv[1]
 
-def get_html(url: str):
-    headers= {"User-Agent": "BootCrawler/1.0"}
-    r = requests.get(url, headers=headers)
-
-    if r.status_code >=400 and r.status_code < 500:
-        raise Exception(f"status code: {r.status_code}")
-    # print(r.headers['content-type'])
-    if "text/html" not in r.headers['content-type']:
-        raise Exception(f"{url} does not contain an html file")
-    return r.text
-
+# def get_html(url: str):
+#     headers= {"User-Agent": "BootCrawler/1.0"}
+#     r = requests.get(url, headers=headers)
+#
+#     if r.status_code >=400 and r.status_code < 500:
+#         raise Exception(f"status code: {r.status_code}")
+#     # print(r.headers['content-type'])
+#     if "text/html" not in r.headers['content-type']:
+#         raise Exception(f"{url} does not contain an html file")
+#     return r.text
+#
 
 def page_crawl(base_url:str, current_url=None, page_data=None):
     if page_data is None:
