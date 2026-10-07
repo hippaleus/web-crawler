@@ -8,6 +8,7 @@ import aiohttp
 from requests.compat import urljoin
 
 import crawl
+from json_report import write_json_report
 
 
 class AsyncCrawler:
@@ -122,9 +123,6 @@ async def main():
     base_url, max_pages, max_concurrency = argumentation(sys.argv)
     print(f"starting crawl of: {base_url}")
     page_data = await crawl_site_async(base_url, max_pages, max_concurrency)
-    for page in page_data.values():
-        print(page["url"])
-        print(page["heading"])
-
+    write_json_report(page_data)
 if __name__ == "__main__":
     asyncio.run(main())
