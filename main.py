@@ -20,14 +20,27 @@ class AsyncCrawler:
         self.max_concurrency = 2
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.session = None
+        self.max_pages = 7
+        self.should_stop = bool
+        self.all_tasks = set()
+
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
         return self
     async def __aexit__(self, exc_type, exc_val, exc_tp):
-        await self.session.close()
+        await self.session.close()  # pyright: ignore[reportOptionalMemberAccess]
 
     async def add_page_visit(self, normalized_url):
         async with self.lock:
+            if self.should_stop is True:
+                return False
+
+
+            if len(self.visited) >= self.max_pages:
+                self.should_stop = True
+                print("Reached maximum amount of pages to crawl")
+                return False
+
             if normalized_url in self.visited:
                 return False
             else:
@@ -35,18 +48,15 @@ class AsyncCrawler:
                 return True
     async def get_html(self, url: str):
         headers= {"User-Agent": "BootCrawler/1.0"}
-        async with self.session.get(url, headers=headers) as response:
+        async with self.session.get(url, headers=headers) as response:  # pyright: ignore[reportOptionalMemberAccess]
 
             if response.status >=400 and response.status < 500:
                 raise Exception(f"status code: {response.status}")
-            # print(r.headers['content-type'])
             if "text/html" not in response.headers['content-type']:
                 raise Exception(f"{url} does not contain an html file")
             return await response.text()
 
     async def page_crawl(self, base_url:str, current_url=None, page_data=None):
-        # if self.page_data is None:
-        #     page_data = {}
         if current_url is None:
             current_url = base_url
         if urlsplit(current_url).netloc != urlsplit(base_url).netloc:
