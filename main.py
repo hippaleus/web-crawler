@@ -11,16 +11,16 @@ import crawl
 
 
 class AsyncCrawler:
-    def __init__(self, base_url) -> None:
+    def __init__(self, base_url, max_pages, max_concurrency) -> None:
         self.base_url = base_url
         self.base_domain = urlsplit(base_url).netloc
         self.page_data = {}
         self.visited =  set()
         self.lock = asyncio.Lock()
-        self.max_concurrency = 2
+        self.max_concurrency = max_concurrency
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.session = None
-        self.max_pages = 7
+        self.max_pages = max_pages
         self.should_stop = bool
         self.all_tasks = set()
 
@@ -36,7 +36,7 @@ class AsyncCrawler:
                 return False
 
 
-            if len(self.visited) >= self.max_pages:
+            if self.max_pages is not None and len(self.visited) >= self.max_pages:
                 self.should_stop = True
                 print("Reached maximum amount of pages to crawl")
                 return False
@@ -57,6 +57,8 @@ class AsyncCrawler:
             return await response.text()
 
     async def page_crawl(self, base_url:str, current_url=None, page_data=None):
+        if self.should_stop is True:
+            return
         if current_url is None:
             current_url = base_url
         if urlsplit(current_url).netloc != urlsplit(base_url).netloc:
@@ -91,26 +93,35 @@ class AsyncCrawler:
         return self.page_data
 
 
-async def crawl_site_async(base_url):
-    async with AsyncCrawler(base_url) as c:
+async def crawl_site_async(base_url, max_pages, max_concurrency):
+    async with AsyncCrawler(base_url, max_pages, max_concurrency) as c:
         return await c.crawl()
 
 
-def argumentation(BASE_URL):
-    args = BASE_URL
+def argumentation(args):
     if len(args) < 2:
         print("no website provided")
         sys.exit(1)
-    if len(args) > 2:
+
+    url = args[1]
+    max_pages = None
+    max_concurrency = 2
+    if len(args) >= 3:
+         max_concurrency = int(args[2])
+    if len(args) >= 4:
+        max_pages = int(args[3])
+
+
+    if len(args) > 4:
         print("too many arguments provided")
         sys.exit(1)
-    return sys.argv[1]
+    return url, max_pages, max_concurrency
 
 
 async def main():
-    base_url = argumentation(sys.argv)
+    base_url, max_pages, max_concurrency = argumentation(sys.argv)
     print(f"starting crawl of: {base_url}")
-    page_data = await crawl_site_async(base_url)
+    page_data = await crawl_site_async(base_url, max_pages, max_concurrency)
     for page in page_data.values():
         print(page["url"])
         print(page["heading"])
