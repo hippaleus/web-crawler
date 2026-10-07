@@ -8,5 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Working Files
 test_crawl.py
 scratch
+repor.json
